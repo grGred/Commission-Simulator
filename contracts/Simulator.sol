@@ -78,14 +78,10 @@ contract Simulator {
         AddressUpgradeable.functionCallWithValue(_dex, _data, msg.value);
 
         uint256 tokenAmntAfterSwap = IERC20Upgradeable(_checkToken).balanceOf(address(this));
-        uint256 balanceBefore = IERC20Upgradeable(_checkToken).balanceOf(msg.sender);
 
-        IERC20Upgradeable(_checkToken).transfer(msg.sender, tokenAmntAfterSwap);
+        (uint256 amountReceived, uint256 amountExpected) = checkTransferToEOA(_checkToken, tokenAmntAfterSwap);
 
-        revert AmntReceived_AmntExpected_TransferSwap(
-            IERC20Upgradeable(_checkToken).balanceOf(msg.sender) - balanceBefore,
-            balanceBefore
-        );
+        revert AmntReceived_AmntExpected_TransferSwap(amountReceived, amountExpected);
     }
 
     /**
@@ -95,7 +91,7 @@ contract Simulator {
      * @param _dex Dex address performing swap logic
      * @param _amountIn Amount of input token for calculation of amount out
      * @param _path The same path of swaps as in _data
-     * @param _checkToken token received after swap and checked for fees
+     * @param _checkToken Token received after swap and checked for fees
      * @param _data Data with swap logic, reciver must be contract address
      */
     function simulateBuyWithSwap(
@@ -112,15 +108,64 @@ contract Simulator {
         AddressUpgradeable.functionCallWithValue(_dex, _data, msg.value);
 
         uint256 tokenAmntAfterBuy = IERC20Upgradeable(_checkToken).balanceOf(address(this));
-        uint256 balanceBefore = IERC20Upgradeable(_checkToken).balanceOf(msg.sender);
 
-        IERC20Upgradeable(_checkToken).transfer(msg.sender, tokenAmntAfterBuy);
+        (uint256 amountReceived, uint256 amountExpected) = checkTransferToEOA(_checkToken, tokenAmntAfterBuy);
 
         revert AmntReceived_AmntExpected_Buy(
             tokenAmntAfterBuy - tokenAmntBeforeBuy,
             amountsOut[amountsOut.length - 1],
-            IERC20Upgradeable(_checkToken).balanceOf(msg.sender) - balanceBefore,
-            balanceBefore
+            amountReceived,
+            amountExpected
         );
+    }
+
+    /**
+     * @dev Log the difference of token recieved after _transfer to msg.sender.
+     *      Shows fees for buy, sell and transfer. Works only with UniswapV2
+     * @notice Use this function to avoid using allowance by using native token
+     * @param _dex Dex address performing swap logic
+     * @param _amountIn Amount of input token for calculation of amount out
+     * @param _path The same path of swaps as in _data
+     * @param _checkToken Token received after swap and checked for fees
+     * @param _dataBuy Data with swap logic, reciver must be contract address
+     * @param _dataSell Data with swap logic, reciver must be contract address
+     */
+    function simulateSellWithSwaps(
+        address _dex,
+        uint256 _amountIn,
+        address[] calldata _path,
+        address _checkToken,
+        bytes calldata _dataBuy,
+        bytes calldata _dataSell
+    ) external payable {
+        uint256[] memory amountsOutBuy = IUniswapV2Router01(_dex).getAmountsOut(_amountIn, _path);
+        uint256 tokenAmntBeforeBuy = IERC20Upgradeable(_checkToken).balanceOf(address(this));
+        AddressUpgradeable.functionCallWithValue(_dex, _dataBuy, msg.value);
+        uint256 tokenAmntAfterBuy = IERC20Upgradeable(_checkToken).balanceOf(address(this));
+
+        uint256[] memory amountsOutSell = IUniswapV2Router01(_dex).getAmountsOut(_amountIn, _path);
+        uint256 tokenAmntBeforeSell = IERC20Upgradeable(_checkToken).balanceOf(address(this));
+        AddressUpgradeable.functionCallWithValue(_dex, _dataSell, msg.value);
+        uint256 tokenAmntAfterSell = IERC20Upgradeable(_checkToken).balanceOf(address(this));
+
+        (uint256 amountReceived, uint256 amountExpected) = checkTransferToEOA(_checkToken, tokenAmntAfterBuy);
+
+        revert AmntReceived_AmntExpected_Sell(
+            tokenAmntAfterBuy - tokenAmntBeforeBuy,
+            amountsOutBuy[amountsOutBuy.length - 1],
+            tokenAmntAfterSell - tokenAmntBeforeSell,
+            amountsOutSell[amountsOutSell.length - 1],
+            amountReceived,
+            amountExpected
+        );
+    }
+
+    function checkTransferToEOA(address _token, uint256 _amount)
+        internal
+        returns (uint256 amntReceived, uint256 amntExpected)
+    {
+        uint256 balanceBefore = IERC20Upgradeable(_token).balanceOf(msg.sender);
+        IERC20Upgradeable(_token).transfer(msg.sender, _amount);
+        return (IERC20Upgradeable(_token).balanceOf(address(this)) - balanceBefore, _amount);
     }
 }
