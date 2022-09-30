@@ -32,11 +32,11 @@ describe('Tests', () => {
     });
 
     describe('#Tests', () => {
-        describe('#funcName', () => {
-            it('Should do smth', async () => {
+        describe('simulateTransfer', () => {
+            it('Should show fee difference', async () => {
                 await swapToken.approve(simulator.address, ethers.constants.MaxUint256);
                 await expect(simulator.simulateTransfer(swapToken.address, 100)).to.be.revertedWith(
-                    'AmntReceivedSubAmntExpected(95, 100)'
+                    'AmntReceived_AmntExpected_Transfer(95, 100)'
                 );
             });
         });

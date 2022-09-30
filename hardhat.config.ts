@@ -17,11 +17,11 @@ const MOONRIVER = process.env.MOONRIVER_API_KEY;
 
 
 const DEFAULT_COMPILER_SETTINGS: SolcUserConfig = {
-  version: '0.8.16',
+  version: '0.8.17',
   settings: {
     optimizer: {
       enabled: true,
-      runs: 100_000,
+      runs: 10_000,
     },
     metadata: {
       bytecodeHash: 'none',
