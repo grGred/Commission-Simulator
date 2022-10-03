@@ -1,11 +1,9 @@
 const hre = require("hardhat");
 
 async function main() {
-  const factory = await hre.ethers.getContractFactory("");
+  const factory = await hre.ethers.getContractFactory("Simulator");
 
-  const deploy = await factory.deploy(
-      '',
-  );
+  const deploy = await factory.deploy();
 
   await deploy.deployed();
 
@@ -15,9 +13,7 @@ async function main() {
 
     await hre.run("verify:verify", {
     address: deploy.address,
-    constructorArguments: [
-        '',
-    ],
+    constructorArguments: [],
   });
 }
 
