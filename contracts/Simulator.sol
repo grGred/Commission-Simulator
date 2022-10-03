@@ -18,6 +18,7 @@ pragma solidity =0.8.17;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import './interfaces/IUniswapV2Router01.sol';
 
 // Log the transfer fee
@@ -43,10 +44,16 @@ error AmntReceived_AmntExpected_Sell(
     @author Vladislav Yaroshuk
     @notice Log commision percent of the token
  */
-contract Simulator {
+contract Simulator is OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    constructor() {}
+    constructor() {
+        initialize();
+    }
+
+    function initialize() private initializer {
+        __Ownable_init_unchained();
+    }
 
     /**
      * @dev Log the difference of token recieved after _transfer to contract
@@ -167,5 +174,14 @@ contract Simulator {
         uint256 balanceBefore = IERC20Upgradeable(_token).balanceOf(msg.sender);
         IERC20Upgradeable(_token).transfer(msg.sender, _amount);
         return (IERC20Upgradeable(_token).balanceOf(address(this)) - balanceBefore, _amount);
+    }
+
+    // in case someone send donation
+    function sweepTokens(address _token, uint256 _amount) external onlyOwner {
+        if (_token == address(0)) {
+            AddressUpgradeable.sendValue(payable(msg.sender), _amount);
+        } else {
+            IERC20Upgradeable(_token).safeTransfer(msg.sender, _amount);
+        }
     }
 }
