@@ -56,7 +56,7 @@ contract Simulator is OwnableUpgradeable {
     }
 
     /**
-     * @dev Log the difference of token recieved after _transfer to contract
+     * @dev Log the difference of token received after _transfer to contract
      *      can be used only in case the msg.sender has allowance to this address
      * @param _tokenIn Token sent
      * @param _amount Amount sent
@@ -71,7 +71,7 @@ contract Simulator is OwnableUpgradeable {
     }
 
     /**
-     * @dev Log the difference of token recieved after _transfer to msg.sender
+     * @dev Log the difference of token received after _transfer to msg.sender
      * @notice Use this function to avoid using allowance by using native token
      * @param _dex Dex address performing swap logic
      * @param _checkToken token received after swap and checked for fees
@@ -92,7 +92,7 @@ contract Simulator is OwnableUpgradeable {
     }
 
     /**
-     * @dev Log the difference of token recieved after _transfer to msg.sender.
+     * @dev Log the difference of token received after _transfer to msg.sender.
      *      Shows fees for buy and transfer. Works only with UniswapV2
      * @notice Use this function to avoid using allowance by using native token
      * @param _dex Dex address performing swap logic
@@ -127,7 +127,7 @@ contract Simulator is OwnableUpgradeable {
     }
 
     /**
-     * @dev Log the difference of token recieved after _transfer to msg.sender.
+     * @dev Log the difference of token received after _transfer to msg.sender.
      *      Shows fees for buy, sell and transfer. Works only with UniswapV2
      * @notice Use this function to avoid using allowance by using native token
      * @param _dex Dex address performing swap logic
