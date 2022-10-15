@@ -75,7 +75,7 @@ contract Simulator is OwnableUpgradeable {
      * @notice Use this function to avoid using allowance by using native token
      * @param _dex Dex address performing swap logic
      * @param _checkToken token received after swap and checked for fees
-     * @param _data Data with swap logic, reciver must be contract address
+     * @param _data Data with swap logic, receiver must be contract address
      */
     function simulateTransferWithSwap(
         address _dex,
@@ -99,7 +99,7 @@ contract Simulator is OwnableUpgradeable {
      * @param _amountIn Amount of input token for calculation of amount out
      * @param _path The same path of swaps as in _data
      * @param _checkToken Token received after swap and checked for fees
-     * @param _data Data with swap logic, reciver must be contract address
+     * @param _data Data with swap logic, receiver must be contract address
      */
     function simulateBuyWithSwap(
         address _dex,
@@ -134,8 +134,8 @@ contract Simulator is OwnableUpgradeable {
      * @param _amountIn Amount of input token for calculation of amount out
      * @param _path The same path of swaps as in _data
      * @param _checkToken Token received after swap and checked for fees
-     * @param _dataBuy Data with swap logic, reciver must be contract address
-     * @param _dataSell Data with swap logic, reciver must be contract address
+     * @param _dataBuy Data with swap logic, receiver must be contract address
+     * @param _dataSell Data with swap logic, receiver must be contract address
      */
     function simulateSellWithSwaps(
         address _dex,
