@@ -173,7 +173,7 @@ contract Simulator is OwnableUpgradeable {
     {
         uint256 balanceBefore = IERC20Upgradeable(_token).balanceOf(msg.sender);
         IERC20Upgradeable(_token).transfer(msg.sender, _amount);
-        return (IERC20Upgradeable(_token).balanceOf(address(this)) - balanceBefore, _amount);
+        return (balanceBefore - IERC20Upgradeable(_token).balanceOf(address(this)), _amount);
     }
 
     // in case someone send donation
