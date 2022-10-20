@@ -62,11 +62,13 @@ contract Simulator is OwnableUpgradeable {
      * @param _amount Amount sent
      */
     function simulateTransfer(address _tokenIn, uint256 _amount) external payable {
-        uint256 balanceBefore = IERC20Upgradeable(_tokenIn).balanceOf(address(this));
         IERC20Upgradeable(_tokenIn).transferFrom(msg.sender, address(this), _amount);
+
+        (uint256 amountReceived, uint256 amountExpected) = checkTransferToEOA(_tokenIn, _amount);
+
         revert AmntReceived_AmntExpected_Transfer(
-            IERC20Upgradeable(_tokenIn).balanceOf(address(this)) - balanceBefore,
-            _amount
+            amountReceived,
+            amountExpected
         );
     }
 
