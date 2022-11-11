@@ -18,19 +18,22 @@ pragma solidity =0.8.17;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol';
 import './interfaces/IUniswapV2Router01.sol';
 
 // Log the transfer fee
-error AmntReceived_AmntExpected_Transfer(uint256 amountReceived, uint256 amountExpected);
-error AmntReceived_AmntExpected_TransferSwap(uint256 amountReceived, uint256 amountExpected);
+error AmntReceived_AmntExpected_Transfer(bool isWhitelisted, uint256 amountReceived, uint256 amountExpected);
+error AmntReceived_AmntExpected_TransferSwap(bool isWhitelisted, uint256 amountReceived, uint256 amountExpected);
 error AmntReceived_AmntExpected_Buy(
+    bool isWhitelisted,
     uint256 amountReceivedBuy,
     uint256 amountExpectedBuy,
     uint256 amountReceivedTransfer,
     uint256 amountExpectedTransfer
 );
 error AmntReceived_AmntExpected_Sell(
+    bool isWhitelisted,
     uint256 amountReceivedBuy,
     uint256 amountExpectedBuy,
     uint256 amountReceivedSell,
@@ -38,21 +41,38 @@ error AmntReceived_AmntExpected_Sell(
     uint256 amountReceivedTransfer,
     uint256 amountExpectedTransfer
 );
+error NotAManager();
+error ZeroAddress();
+error NotAnAdmin();
 
 /**
     @title Simulator
-    @author Vladislav Yaroshuk
+    @author Rubic Exchange
     @notice Log commision percent of the token
  */
-contract Simulator is OwnableUpgradeable {
+contract Simulator is AccessControlUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
-    constructor() {
-        initialize();
+    // AddressSet of whitelisted tokens
+    EnumerableSetUpgradeable.AddressSet internal whitelistedTokens;
+
+    bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
+
+    function initialize() external initializer {
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(MANAGER_ROLE, msg.sender);
     }
 
-    function initialize() private initializer {
-        __Ownable_init_unchained();
+    // reference to https://github.com/OpenZeppelin/openzeppelin-contracts/pull/3347/
+    modifier onlyAdmin() {
+        checkIsAdmin();
+        _;
+    }
+
+    modifier onlyManagerOrAdmin() {
+        checkIsManagerOrAdmin();
+        _;
     }
 
     /**
@@ -67,6 +87,7 @@ contract Simulator is OwnableUpgradeable {
         (uint256 amountReceived, uint256 amountExpected) = checkTransferToEOA(_tokenIn, _amount);
 
         revert AmntReceived_AmntExpected_Transfer(
+            whitelistedTokens.contains(_tokenIn),
             amountReceived,
             amountExpected
         );
@@ -90,7 +111,11 @@ contract Simulator is OwnableUpgradeable {
 
         (uint256 amountReceived, uint256 amountExpected) = checkTransferToEOA(_checkToken, tokenAmntAfterSwap);
 
-        revert AmntReceived_AmntExpected_TransferSwap(amountReceived, amountExpected);
+        revert AmntReceived_AmntExpected_TransferSwap(
+            whitelistedTokens.contains(_checkToken),
+            amountReceived,
+            amountExpected
+        );
     }
 
     /**
@@ -121,6 +146,7 @@ contract Simulator is OwnableUpgradeable {
         (uint256 amountReceived, uint256 amountExpected) = checkTransferToEOA(_checkToken, tokenAmntAfterBuy);
 
         revert AmntReceived_AmntExpected_Buy(
+            whitelistedTokens.contains(_checkToken),
             tokenAmntAfterBuy - tokenAmntBeforeBuy,
             amountsOut[amountsOut.length - 1],
             amountReceived,
@@ -160,6 +186,7 @@ contract Simulator is OwnableUpgradeable {
         (uint256 amountReceived, uint256 amountExpected) = checkTransferToEOA(_checkToken, tokenAmntAfterBuy);
 
         revert AmntReceived_AmntExpected_Sell(
+            whitelistedTokens.contains(_checkToken),
             tokenAmntAfterBuy - tokenAmntBeforeBuy,
             amountsOutBuy[amountsOutBuy.length - 1],
             tokenAmntAfterSell - tokenAmntBeforeSell,
@@ -180,11 +207,72 @@ contract Simulator is OwnableUpgradeable {
     }
 
     // in case someone send donation
-    function sweepTokens(address _token, uint256 _amount) external onlyOwner {
+    function sweepTokens(address _token, uint256 _amount) external onlyManagerOrAdmin {
         if (_token == address(0)) {
             AddressUpgradeable.sendValue(payable(msg.sender), _amount);
         } else {
             IERC20Upgradeable(_token).safeTransfer(msg.sender, _amount);
         }
+    }
+
+    /**
+     * @notice Used in modifiers
+     * @dev Function to check if address is belongs to manager or admin role
+     */
+    function checkIsManagerOrAdmin() internal view {
+        if (!(hasRole(MANAGER_ROLE, msg.sender) || hasRole(DEFAULT_ADMIN_ROLE, msg.sender))) {
+            revert NotAManager();
+        }
+    }
+
+    /**
+     * @notice Used in modifiers
+     * @dev Function to check if address is belongs to default admin role
+     */
+    function checkIsAdmin() internal view {
+        if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
+            revert NotAnAdmin();
+        }
+    }
+
+    /**
+     * @dev Appends new available tokens
+     * @param _tokens Token addresses to add
+     */
+    function addWhitelistedTokens(address[] memory _tokens) external onlyManagerOrAdmin {
+        uint256 length = _tokens.length;
+        for (uint256 i; i < length; ) {
+            address _token = _tokens[i];
+            if (_token == address(0)) {
+                revert ZeroAddress();
+            }
+            // Check that router exists is performed inside the library
+            whitelistedTokens.add(_token);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+     * @dev Removes existing available tokens
+     * @param _tokens Tokens addresses to remove
+     */
+    function removeWhitelistedTokens(address[] memory _tokens) external onlyManagerOrAdmin {
+        uint256 length = _tokens.length;
+        for (uint256 i; i < length; ) {
+            // Check that router exists is performed inside the library
+            whitelistedTokens.remove(_tokens[i]);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+     * @return Available in whitelist
+     */
+    function getWhitelistedTokens() external view returns (address[] memory) {
+        return whitelistedTokens.values();
     }
 }
