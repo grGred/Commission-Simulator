@@ -12,7 +12,7 @@ async function main() {
   await new Promise(r => setTimeout(r, 10000));
 
     await hre.run("verify:verify", {
-    address: '',
+    address: '0xf5454e6da76e2af9824b8d88f2af103159a396aa',
     constructorArguments: [],
   });
 }
